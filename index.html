@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SMS Guard | Advanced Spam Detection</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 100px;
+            overflow: hidden;
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: #334155;
+            stroke-width: 20;
+            stroke-linecap: round;
+        }
+
+        .gauge-fill {
+            fill: none;
+            stroke-width: 20;
+            stroke-linecap: round;
+            transition: stroke-dasharray 0.5s ease;
+        }
+
+        .needle {
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: 50% 100%;
+        }
+    </style>
+</head>
+
+<body class="bg-[#0f172a] text-slate-200 min-h-screen pb-12">
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-12">
+
+            <div class="flex items-center gap-3">
+
+                <div class="bg-sky-500 p-2 rounded-xl shadow-lg shadow-sky-500/20">
+                    <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
+                </div>
+
+                <h1
+                    class="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                    SMS Fraud Detector
+                </h1>
+
+            </div>
+
+            <div class="text-sm text-slate-400 font-medium">
+                AI-Powered SMS Analysis
+            </div>
+
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            <!-- Left Side -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Input -->
+                <div class="glass p-6 rounded-3xl border border-slate-700/50 shadow-xl">
+
+                    <div class="flex items-center gap-2 mb-4 text-slate-400">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                        <span class="text-sm font-semibold uppercase tracking-wider">
+                            Analysis Input
+                        </span>
+                    </div>
+
+                    <textarea id="message" rows="6"
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-2xl p-4 text-slate-100 placeholder-slate-500 focus:outline-none"
+                        placeholder="Paste the suspicious SMS content here..."></textarea>
+
+                    <button onclick="checkMessage()"
+                        class="mt-6 w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2">
+
+                        <i data-lucide="search" class="w-5 h-5"></i>
+
+                        Analyze Message
+
+                    </button>
+
+                </div>
+
+                <!-- History -->
+                <div class="glass p-6 rounded-3xl border border-slate-700/50 shadow-xl">
+
+                    <div class="flex items-center justify-between mb-6">
+
+                        <div class="flex items-center gap-2 text-slate-400">
+                            <i data-lucide="history" class="w-4 h-4"></i>
+
+                            <span class="text-sm font-semibold uppercase tracking-wider">
+                                Recent Activity
+                            </span>
+                        </div>
+
+                        <button onclick="clearHistory()"
+                            class="text-xs text-slate-500 hover:text-rose-400">
+                            Clear All
+                        </button>
+
+                    </div>
+
+                    <div id="historyList" class="space-y-4"></div>
+
+                </div>
+
+            </div>
+
+            <!-- Right Side -->
+            <div class="lg:col-span-5 space-y-6">
+
+                <!-- Result Card -->
+                <div class="glass p-8 rounded-3xl border border-slate-700/50 shadow-xl text-center">
+
+                    <div id="resultStatusIcon"
+                        class="mb-4 inline-flex p-4 rounded-full bg-slate-800 text-slate-400">
+
+                        <i data-lucide="info" class="w-8 h-8"></i>
+
+                    </div>
+
+                    <h2 id="result"
+                        class="text-2xl font-bold text-slate-300 mb-1 italic">
+                        Waiting for analysis...
+                    </h2>
+
+                    <p id="probText"
+                        class="text-slate-500 text-sm font-medium">
+                        Enter a message to see the score
+                    </p>
+
+                    <!-- Gauge -->
+                    <div class="mt-8 flex flex-col items-center">
+
+                        <div class="gauge-container">
+
+                            <svg viewBox="0 0 200 100">
+
+                                <path class="gauge-bg"
+                                    d="M20,100 A80,80 0 0,1 180,100" />
+
+                                <path id="gaugeFill"
+                                    class="gauge-fill"
+                                    d="M20,100 A80,80 0 0,1 180,100"
+                                    stroke="url(#gradient)"
+                                    stroke-dasharray="0 251.3" />
+
+                                <defs>
+                                    <linearGradient id="gradient"
+                                        x1="0%" y1="0%" x2="100%" y2="0%">
+
+                                        <stop offset="0%"
+                                            style="stop-color:#10b981" />
+
+                                        <stop offset="50%"
+                                            style="stop-color:#f59e0b" />
+
+                                        <stop offset="100%"
+                                            style="stop-color:#ef4444" />
+
+                                    </linearGradient>
+                                </defs>
+
+                            </svg>
+
+                            <div id="needle"
+                                class="needle absolute bottom-0 left-1/2 -ml-[2px] w-[4px] h-[75px] bg-white rounded-full origin-bottom"
+                                style="transform: rotate(-90deg)">
+                            </div>
+
+                        </div>
+
+                        <span class="text-xs font-bold text-slate-500 mt-2">
+                            FRAUD PROBABILITY
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <!-- Indicators -->
+                <div class="glass p-6 rounded-3xl border border-slate-700/50 shadow-xl">
+
+                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden mb-6">
+
+                        <div id="barFill"
+                            class="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 w-0 transition-all duration-700">
+                        </div>
+
+                    </div>
+
+                    <div id="suspiciousContainer" class="hidden">
+
+                        <p class="text-xs text-slate-400 font-bold mb-3">
+                            SUSPICIOUS TERMS FOUND:
+                        </p>
+
+                        <div id="words" class="flex flex-wrap gap-2"></div>
+
+                    </div>
+
+                </div>
+
+                <!-- Metrics -->
+                <div class="grid grid-cols-2 gap-4">
+
+                    <div class="glass p-4 rounded-2xl">
+                        <span class="block text-[10px] text-slate-500">Accuracy</span>
+                        <span id="acc" class="text-xl font-bold text-sky-400">--</span>
+                    </div>
+
+                    <div class="glass p-4 rounded-2xl">
+                        <span class="block text-[10px] text-slate-500">Precision</span>
+                        <span id="prec" class="text-xl font-bold text-emerald-400">--</span>
+                    </div>
+
+                    <div class="glass p-4 rounded-2xl">
+                        <span class="block text-[10px] text-slate-500">Recall</span>
+                        <span id="rec" class="text-xl font-bold text-amber-400">--</span>
+                    </div>
+
+                    <div class="glass p-4 rounded-2xl">
+                        <span class="block text-[10px] text-slate-500">F1 Score</span>
+                        <span id="f1" class="text-xl font-bold text-rose-400">--</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        lucide.createIcons();
+
+        let history = JSON.parse(
+            localStorage.getItem('spam_history') || '[]'
+        );
+
+        updateHistoryUI();
+
+        async function checkMessage() {
+
+            const msg =
+                document.getElementById("message").value.trim();
+
+            if (!msg) return;
+
+            try {
+
+                const response = await fetch("/api/predict", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        message: msg
+                    })
+
+                });
+
+                const data = await response.json();
+
+                displayResults(data);
+
+                saveToHistory(data, msg);
+
+            }
+
+            catch (err) {
+
+                console.error(err);
+
+                alert("Error connecting to Flask API");
+
+            }
+
+        }
+
+        function displayResults(data) {
+
+            const isSpam =
+                data.prediction.toLowerCase().includes("spam");
+
+            const prob =
+                (data.spam_prob * 100).toFixed(1);
+
+            // Result
+            document.getElementById("result").innerText =
+                isSpam ? "SPAM DETECTED" : "SAFE MESSAGE";
+
+            document.getElementById("probText").innerText =
+                prob + "% Spam Probability";
+
+            // Progress Bar
+            document.getElementById("barFill").style.width =
+                prob + "%";
+
+            // Gauge
+            const dashValue =
+                (data.spam_prob * 251.3).toFixed(2);
+
+            document.getElementById("gaugeFill")
+                .setAttribute(
+                    "stroke-dasharray",
+                    `${dashValue} 251.3`
+                );
+
+            // Needle
+            const angle =
+                (data.spam_prob * 180) - 90;
+
+            document.getElementById("needle")
+                .style.transform =
+                `rotate(${angle}deg)`;
+
+            // Suspicious Words
+            const words =
+                document.getElementById("words");
+
+            words.innerHTML = "";
+
+            if (data.suspicious.length > 0) {
+
+                document.getElementById("suspiciousContainer")
+                    .classList.remove("hidden");
+
+                data.suspicious.forEach(word => {
+
+                    const span =
+                        document.createElement("span");
+
+                    span.className =
+                        "px-2 py-1 rounded-md bg-rose-500/20 text-rose-400 text-xs";
+
+                    span.innerText = word;
+
+                    words.appendChild(span);
+
+                });
+
+            } else {
+
+                document.getElementById("suspiciousContainer")
+                    .classList.add("hidden");
+
+            }
+
+            // Metrics
+            document.getElementById("acc").innerText =
+                data.metrics.accuracy.toFixed(3);
+
+            document.getElementById("prec").innerText =
+                data.metrics.precision.toFixed(3);
+
+            document.getElementById("rec").innerText =
+                data.metrics.recall.toFixed(3);
+
+            document.getElementById("f1").innerText =
+                data.metrics.f1_score.toFixed(3);
+
+            lucide.createIcons();
+
+        }
+
+        function saveToHistory(data, msg) {
+
+            const entry = {
+
+                id: Date.now(),
+
+                message: msg,
+
+                prediction: data.prediction,
+
+                prob: data.spam_prob
+
+            };
+
+            history.unshift(entry);
+
+            if (history.length > 10)
+                history.pop();
+
+            localStorage.setItem(
+                "spam_history",
+                JSON.stringify(history)
+            );
+
+            updateHistoryUI();
+
+        }
+
+        function updateHistoryUI() {
+
+            const list =
+                document.getElementById("historyList");
+
+            if (history.length === 0) {
+
+                list.innerHTML =
+                    `<div class="text-center text-slate-500">
+                        No recent messages analyzed.
+                    </div>`;
+
+                return;
+
+            }
+
+            list.innerHTML = history.map(item => `
+
+                <div class="p-4 rounded-2xl bg-slate-800/50">
+
+                    <div class="flex justify-between mb-2">
+
+                        <span class="${item.prediction.toLowerCase().includes('spam')
+                    ? 'text-rose-500'
+                    : 'text-emerald-500'
+                } font-bold text-xs">
+
+                            ${item.prediction}
+
+                        </span>
+
+                        <span class="text-xs text-slate-500">
+
+                            ${(item.prob * 100).toFixed(0)}%
+
+                        </span>
+
+                    </div>
+
+                    <p class="text-sm text-slate-300">
+
+                        ${item.message}
+
+                    </p>
+
+                </div>
+
+            `).join('');
+
+        }
+
+        function clearHistory() {
+
+            history = [];
+
+            localStorage.removeItem("spam_history");
+
+            updateHistoryUI();
+
+        }
+
+    </script>
+
+</body>
+
+</html>
