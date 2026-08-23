@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 # Virtual environments
+.venv/
 venv/
 env/
 ENV/
@@ -25,11 +26,13 @@ Thumbs.db
 build/
 dist/
 
-# Model training files (optional if large)
+# Model files (optional)
 *.h5
 *.pt
 *.pth
+*.joblib
+*.pkl
 
 # IDE settings
 .vscode/
-.idea/	
+.idea/
