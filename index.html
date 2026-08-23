@@ -4,490 +4,1003 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>SMS Guard | Advanced Spam Detection</title>
+    <title>Spam & Fraud Detector</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
-
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(circle at top left, #172554, transparent 35%),
+                radial-gradient(circle at bottom right, #3f1d1d, transparent 35%),
+                #020617;
+            min-height: 100vh;
         }
 
         .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
         }
 
-        .gauge-container {
+        .fraud-alert {
+            animation: alertPulse 1.5s infinite;
+        }
+
+        @keyframes alertPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+            }
+
+            50% {
+                box-shadow: 0 0 35px rgba(239, 68, 68, 0.35);
+            }
+        }
+
+        .safe-glow {
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.15);
+        }
+
+        .fraud-glow {
+            box-shadow: 0 0 35px rgba(239, 68, 68, 0.25);
+        }
+
+        #gauge {
             position: relative;
-            width: 200px;
-            height: 100px;
-            overflow: hidden;
+            width: 400px;
+            max-width: 100%;
+            margin: auto;
         }
 
-        .gauge-bg {
-            fill: none;
-            stroke: #334155;
-            stroke-width: 20;
-            stroke-linecap: round;
+        #needle {
+            transition: transform 900ms cubic-bezier(.17,.67,.3,1.25);
         }
 
-        .gauge-fill {
-            fill: none;
-            stroke-width: 20;
-            stroke-linecap: round;
-            transition: stroke-dasharray 0.5s ease;
+        #gaugeFill {
+            transition: stroke-dasharray 900ms ease;
         }
 
-        .needle {
-            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform-origin: 50% 100%;
+        .shake {
+            animation: shake 0.45s ease-in-out;
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            50% { transform: translateX(6px); }
+            75% { transform: translateX(-6px); }
+            100% { transform: translateX(0); }
         }
     </style>
 </head>
 
-<body class="bg-[#0f172a] text-slate-200 min-h-screen pb-12">
+<body class="text-white">
 
-    <div class="max-w-6xl mx-auto px-4 py-8">
+<div class="max-w-5xl mx-auto px-4 py-8">
 
-        <!-- Header -->
-        <header class="flex items-center justify-between mb-12">
+    <header class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 mb-4">
+            <i data-lucide="shield-check" class="w-8 h-8 text-sky-400"></i>
+        </div>
 
-            <div class="flex items-center gap-3">
+        <h1 class="text-3xl md:text-4xl font-black">
+            Spam & Fraud Detector
+        </h1>
 
-                <div class="bg-sky-500 p-2 rounded-xl shadow-lg shadow-sky-500/20">
-                    <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
-                </div>
+        <p class="text-slate-400 mt-2">
+            Analyze messages and detect suspicious or fraudulent content
+        </p>
+    </header>
 
-                <h1
-                    class="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                    SMS Fraud Detector
-                </h1>
+    <div id="fraudAlert" class="hidden mb-6 p-5 rounded-3xl bg-rose-950/70 border border-rose-500/60 fraud-alert">
+        <div class="flex items-start gap-4">
 
+            <div class="flex-shrink-0 w-12 h-12 rounded-2xl bg-rose-500/20 flex items-center justify-center">
+                <i data-lucide="triangle-alert" class="w-7 h-7 text-rose-400"></i>
             </div>
 
-            <div class="text-sm text-slate-400 font-medium">
-                AI-Powered SMS Analysis
-            </div>
-
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-            <!-- Left Side -->
-            <div class="lg:col-span-7 space-y-6">
-
-                <!-- Input -->
-                <div class="glass p-6 rounded-3xl border border-slate-700/50 shadow-xl">
-
-                    <div class="flex items-center gap-2 mb-4 text-slate-400">
-                        <i data-lucide="message-square" class="w-4 h-4"></i>
-                        <span class="text-sm font-semibold uppercase tracking-wider">
-                            Analysis Input
-                        </span>
-                    </div>
-
-                    <textarea id="message" rows="6"
-                        class="w-full bg-slate-900/50 border border-slate-700 rounded-2xl p-4 text-slate-100 placeholder-slate-500 focus:outline-none"
-                        placeholder="Paste the suspicious SMS content here..."></textarea>
-
-                    <button onclick="checkMessage()"
-                        class="mt-6 w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2">
-
-                        <i data-lucide="search" class="w-5 h-5"></i>
-
-                        Analyze Message
-
-                    </button>
-
-                </div>
-
-                <!-- History -->
-                <div class="glass p-6 rounded-3xl border border-slate-700/50 shadow-xl">
-
-                    <div class="flex items-center justify-between mb-6">
-
-                        <div class="flex items-center gap-2 text-slate-400">
-                            <i data-lucide="history" class="w-4 h-4"></i>
-
-                            <span class="text-sm font-semibold uppercase tracking-wider">
-                                Recent Activity
-                            </span>
-                        </div>
-
-                        <button onclick="clearHistory()"
-                            class="text-xs text-slate-500 hover:text-rose-400">
-                            Clear All
-                        </button>
-
-                    </div>
-
-                    <div id="historyList" class="space-y-4"></div>
-
-                </div>
-
-            </div>
-
-            <!-- Right Side -->
-            <div class="lg:col-span-5 space-y-6">
-
-                <!-- Result Card -->
-                <div class="glass p-8 rounded-3xl border border-slate-700/50 shadow-xl text-center">
-
-                    <div id="resultStatusIcon"
-                        class="mb-4 inline-flex p-4 rounded-full bg-slate-800 text-slate-400">
-
-                        <i data-lucide="info" class="w-8 h-8"></i>
-
-                    </div>
-
-                    <h2 id="result"
-                        class="text-2xl font-bold text-slate-300 mb-1 italic">
-                        Waiting for analysis...
+            <div class="flex-1">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-lg font-black text-rose-400">
+                        FRAUD ALERT
                     </h2>
 
-                    <p id="probText"
-                        class="text-slate-500 text-sm font-medium">
-                        Enter a message to see the score
-                    </p>
-
-                    <!-- Gauge -->
-                    <div class="mt-8 flex flex-col items-center">
-
-                        <div class="gauge-container">
-
-                            <svg viewBox="0 0 200 100">
-
-                                <path class="gauge-bg"
-                                    d="M20,100 A80,80 0 0,1 180,100" />
-
-                                <path id="gaugeFill"
-                                    class="gauge-fill"
-                                    d="M20,100 A80,80 0 0,1 180,100"
-                                    stroke="url(#gradient)"
-                                    stroke-dasharray="0 251.3" />
-
-                                <defs>
-                                    <linearGradient id="gradient"
-                                        x1="0%" y1="0%" x2="100%" y2="0%">
-
-                                        <stop offset="0%"
-                                            style="stop-color:#10b981" />
-
-                                        <stop offset="50%"
-                                            style="stop-color:#f59e0b" />
-
-                                        <stop offset="100%"
-                                            style="stop-color:#ef4444" />
-
-                                    </linearGradient>
-                                </defs>
-
-                            </svg>
-
-                            <div id="needle"
-                                class="needle absolute bottom-0 left-1/2 -ml-[2px] w-[4px] h-[75px] bg-white rounded-full origin-bottom"
-                                style="transform: rotate(-90deg)">
-                            </div>
-
-                        </div>
-
-                        <span class="text-xs font-bold text-slate-500 mt-2">
-                            FRAUD PROBABILITY
-                        </span>
-
-                    </div>
-
+                    <span class="px-2 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-bold">
+                        HIGH RISK
+                    </span>
                 </div>
 
-                <!-- Indicators -->
-                <div class="glass p-6 rounded-3xl border border-slate-700/50 shadow-xl">
+                <p class="text-sm text-rose-200/80 mt-1">
+                    This message has a fraud probability of
+                    <strong id="alertProbability">50%</strong>
+                    or higher.
+                </p>
 
-                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden mb-6">
+                <p class="text-xs text-rose-300/60 mt-2">
+                    Do not click unknown links, share OTPs, passwords,
+                    banking information, or send money unless you have
+                    independently verified the sender.
+                </p>
+            </div>
 
-                        <div id="barFill"
-                            class="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 w-0 transition-all duration-700">
-                        </div>
+            <button onclick="dismissAlert()" class="text-rose-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
 
-                    </div>
+    <section class="glass p-6 md:p-8 rounded-3xl border border-slate-700/50 shadow-xl mb-6">
 
-                    <div id="suspiciousContainer" class="hidden">
+        <div class="flex items-center gap-3 mb-4">
 
-                        <p class="text-xs text-slate-400 font-bold mb-3">
-                            SUSPICIOUS TERMS FOUND:
-                        </p>
+            <div class="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center">
+                <i data-lucide="message-square" class="w-5 h-5 text-sky-400"></i>
+            </div>
 
-                        <div id="words" class="flex flex-wrap gap-2"></div>
+            <div>
+                <h2 class="font-bold">
+                    Analyze a Message
+                </h2>
 
-                    </div>
-
-                </div>
-
-                <!-- Metrics -->
-                <div class="grid grid-cols-2 gap-4">
-
-                    <div class="glass p-4 rounded-2xl">
-                        <span class="block text-[10px] text-slate-500">Accuracy</span>
-                        <span id="acc" class="text-xl font-bold text-sky-400">--</span>
-                    </div>
-
-                    <div class="glass p-4 rounded-2xl">
-                        <span class="block text-[10px] text-slate-500">Precision</span>
-                        <span id="prec" class="text-xl font-bold text-emerald-400">--</span>
-                    </div>
-
-                    <div class="glass p-4 rounded-2xl">
-                        <span class="block text-[10px] text-slate-500">Recall</span>
-                        <span id="rec" class="text-xl font-bold text-amber-400">--</span>
-                    </div>
-
-                    <div class="glass p-4 rounded-2xl">
-                        <span class="block text-[10px] text-slate-500">F1 Score</span>
-                        <span id="f1" class="text-xl font-bold text-rose-400">--</span>
-                    </div>
-
-                </div>
-
+                <p class="text-xs text-slate-500">
+                    Enter an SMS, email, or suspicious message
+                </p>
             </div>
 
         </div>
 
-    </div>
+        <div class="flex flex-col md:flex-row gap-3">
 
-    <script>
+            <input
+                type="text"
+                id="message"
+                placeholder="Example: Congratulations! You won a prize. Click here..."
+                class="flex-1 px-4 py-4 rounded-2xl bg-slate-900/80 border border-slate-700 text-white outline-none focus:border-sky-500 placeholder:text-slate-600">
 
-        lucide.createIcons();
+            <button
+                onclick="checkMessage()"
+                id="checkButton"
+                class="px-7 py-4 rounded-2xl bg-sky-600 hover:bg-sky-500 font-bold transition flex items-center justify-center gap-2">
 
-        let history = JSON.parse(
-            localStorage.getItem('spam_history') || '[]'
+                <i data-lucide="scan-search" class="w-5 h-5"></i>
+                Analyze Message
+
+            </button>
+
+        </div>
+
+    </section>
+
+    <section id="resultCard" class="glass p-6 md:p-8 rounded-3xl border border-slate-700/50 shadow-xl mb-6">
+
+        <div class="text-center mb-4">
+
+            <div id="statusIcon" class="mx-auto w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center mb-4">
+                <i data-lucide="shield" class="w-7 h-7 text-slate-400"></i>
+            </div>
+
+            <h2 id="result" class="text-2xl font-black">
+                READY
+            </h2>
+
+            <p id="probText" class="text-slate-400 mt-1">
+                0% Fraud Probability
+            </p>
+
+        </div>
+
+        <div id="gauge">
+
+            <svg viewBox="0 0 200 120" width="400" height="240" class="max-w-full">
+
+                <path
+                    d="M20,100 A80,80 0 0,1 180,100"
+                    fill="none"
+                    stroke="#1e293b"
+                    stroke-width="12"
+                    stroke-linecap="round"/>
+
+                <path
+                    id="gaugeFill"
+                    d="M20,100 A80,80 0 0,1 180,100"
+                    fill="none"
+                    stroke="url(#gradient)"
+                    stroke-width="12"
+                    stroke-linecap="round"
+                    stroke-dasharray="0 251.3"/>
+
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#10b981"/>
+                        <stop offset="50%" style="stop-color:#f59e0b"/>
+                        <stop offset="100%" style="stop-color:#ef4444"/>
+                    </linearGradient>
+                </defs>
+
+            </svg>
+
+            <div
+                id="needle"
+                class="absolute bottom-0 left-1/2 -ml-[2px] w-[4px] h-[75px] bg-white rounded-full origin-bottom"
+                style="transform: rotate(-90deg)">
+            </div>
+
+        </div>
+
+        <div class="text-center">
+            <span class="text-xs font-bold text-slate-500">
+                FRAUD PROBABILITY
+            </span>
+        </div>
+
+        <div class="mt-6">
+
+            <div class="flex justify-between text-xs mb-2">
+                <span class="text-emerald-400">
+                    SAFE
+                </span>
+
+                <span class="text-rose-400">
+                    HIGH RISK
+                </span>
+            </div>
+
+            <div class="w-full bg-slate-800 rounded-full h-4 overflow-hidden">
+
+                <div
+                    id="barFill"
+                    class="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 w-0 transition-all duration-700">
+                </div>
+
+            </div>
+
+            <div class="flex justify-between text-[10px] text-slate-600 mt-2">
+                <span>0%</span>
+                <span>50% ALERT</span>
+                <span>100%</span>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="glass p-6 rounded-3xl border border-slate-700/50 shadow-xl mb-6">
+
+        <div class="flex items-center gap-3 mb-4">
+
+            <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                <i data-lucide="search" class="w-5 h-5 text-rose-400"></i>
+            </div>
+
+            <div>
+                <h3 class="font-bold">
+                    Suspicious Terms
+                </h3>
+
+                <p class="text-xs text-slate-500">
+                    Potentially risky words detected in the message
+                </p>
+            </div>
+
+        </div>
+
+        <div id="words" class="flex flex-wrap gap-2">
+            <span class="text-xs text-slate-600">
+                No suspicious terms detected.
+            </span>
+        </div>
+
+    </section>
+
+    <section class="mb-6">
+
+        <div class="flex items-center gap-3 mb-4">
+
+            <i data-lucide="bar-chart-3" class="w-5 h-5 text-sky-400"></i>
+
+            <h3 class="font-bold">
+                Model Performance
+            </h3>
+
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+            <div class="glass p-5 rounded-2xl border border-slate-700/50">
+                <span class="block text-[10px] text-slate-500 uppercase">
+                    Accuracy
+                </span>
+
+                <span id="acc" class="text-2xl font-black text-sky-400">
+                    --
+                </span>
+            </div>
+
+            <div class="glass p-5 rounded-2xl border border-slate-700/50">
+                <span class="block text-[10px] text-slate-500 uppercase">
+                    Precision
+                </span>
+
+                <span id="prec" class="text-2xl font-black text-emerald-400">
+                    --
+                </span>
+            </div>
+
+            <div class="glass p-5 rounded-2xl border border-slate-700/50">
+                <span class="block text-[10px] text-slate-500 uppercase">
+                    Recall
+                </span>
+
+                <span id="rec" class="text-2xl font-black text-amber-400">
+                    --
+                </span>
+            </div>
+
+            <div class="glass p-5 rounded-2xl border border-slate-700/50">
+                <span class="block text-[10px] text-slate-500 uppercase">
+                    F1 Score
+                </span>
+
+                <span id="f1" class="text-2xl font-black text-rose-400">
+                    --
+                </span>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section id="history-section" class="glass p-6 rounded-3xl border border-slate-700/50 shadow-xl">
+
+        <div class="flex justify-between items-center mb-5">
+
+            <div class="flex items-center gap-3">
+
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center">
+                    <i data-lucide="history" class="w-5 h-5 text-slate-400"></i>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-300">
+                        Recent Analysis
+                    </h3>
+
+                    <p class="text-xs text-slate-500">
+                        Last 10 analyzed messages
+                    </p>
+                </div>
+
+            </div>
+
+            <button
+                type="button"
+                onclick="clearHistory()"
+                class="text-xs text-slate-500 hover:text-rose-400 transition">
+                Clear History
+            </button>
+
+        </div>
+
+        <div id="historyList" class="space-y-3">
+
+            <div class="text-center text-slate-500 py-6">
+                No recent messages analyzed.
+            </div>
+
+        </div>
+
+    </section>
+
+    <footer class="text-center text-[10px] text-slate-600 mt-8">
+        Spam & Fraud Detection System
+    </footer>
+
+</div>
+
+<script>
+
+lucide.createIcons();
+
+let history = JSON.parse(
+    localStorage.getItem("spam_history") || "[]"
+);
+
+updateHistoryUI();
+
+async function checkMessage() {
+
+    const input =
+        document.getElementById("message");
+
+    const button =
+        document.getElementById("checkButton");
+
+    const msg =
+        input.value.trim();
+
+    if (!msg) {
+        input.focus();
+        return;
+    }
+
+    button.disabled = true;
+
+    button.innerHTML = `
+        <i data-lucide="loader-2"
+           class="w-5 h-5 animate-spin"></i>
+        Analyzing...
+    `;
+
+    lucide.createIcons();
+
+    try {
+
+        const response = await fetch(
+            "/api/predict",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: msg
+                })
+            }
         );
 
-        updateHistoryUI();
-
-        async function checkMessage() {
-
-            const msg =
-                document.getElementById("message").value.trim();
-
-            if (!msg) return;
-
-            try {
-
-                const response = await fetch("/api/predict", {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        message: msg
-                    })
-
-                });
-
-                const data = await response.json();
-
-                displayResults(data);
-
-                saveToHistory(data, msg);
-
-            }
-
-            catch (err) {
-
-                console.error(err);
-
-                alert("Error connecting to Flask API");
-
-            }
-
+        if (!response.ok) {
+            throw new Error(
+                "API returned " + response.status
+            );
         }
 
-        function displayResults(data) {
+        const data =
+            await response.json();
 
-            const isSpam =
-                data.prediction.toLowerCase().includes("spam");
+        displayResults(data);
 
-            const prob =
-                (data.spam_prob * 100).toFixed(1);
+        saveToHistory(data, msg);
 
-            // Result
-            document.getElementById("result").innerText =
-                isSpam ? "SPAM DETECTED" : "SAFE MESSAGE";
+    } catch (err) {
 
-            document.getElementById("probText").innerText =
-                prob + "% Spam Probability";
+        console.error(err);
 
-            // Progress Bar
-            document.getElementById("barFill").style.width =
-                prob + "%";
+        alert(
+            "Error connecting to the prediction API."
+        );
 
-            // Gauge
-            const dashValue =
-                (data.spam_prob * 251.3).toFixed(2);
+    } finally {
 
-            document.getElementById("gaugeFill")
-                .setAttribute(
-                    "stroke-dasharray",
-                    `${dashValue} 251.3`
-                );
+        button.disabled = false;
 
-            // Needle
-            const angle =
-                (data.spam_prob * 180) - 90;
+        button.innerHTML = `
+            <i data-lucide="scan-search"
+               class="w-5 h-5"></i>
+            Analyze Message
+        `;
 
-            document.getElementById("needle")
-                .style.transform =
-                `rotate(${angle}deg)`;
+        lucide.createIcons();
+    }
+}
 
-            // Suspicious Words
-            const words =
-                document.getElementById("words");
+function displayResults(data) {
 
-            words.innerHTML = "";
+    const probability =
+        Number(data.spam_prob || 0);
 
-            if (data.suspicious.length > 0) {
+    const prob =
+        Math.min(
+            Math.max(probability, 0),
+            1
+        );
 
-                document.getElementById("suspiciousContainer")
-                    .classList.remove("hidden");
+    const percentage =
+        (prob * 100).toFixed(1);
 
-                data.suspicious.forEach(word => {
+    const isFraud =
+        prob >= 0.50;
 
-                    const span =
-                        document.createElement("span");
+    const resultCard =
+        document.getElementById("resultCard");
 
-                    span.className =
-                        "px-2 py-1 rounded-md bg-rose-500/20 text-rose-400 text-xs";
+    const result =
+        document.getElementById("result");
 
-                    span.innerText = word;
+    const probText =
+        document.getElementById("probText");
 
-                    words.appendChild(span);
+    const statusIcon =
+        document.getElementById("statusIcon");
 
-                });
+    if (isFraud) {
 
-            } else {
+        result.innerText =
+            "FRAUD DETECTED";
 
-                document.getElementById("suspiciousContainer")
-                    .classList.add("hidden");
+        result.className =
+            "text-2xl font-black text-rose-400";
 
-            }
+        probText.innerText =
+            percentage + "% Fraud Probability";
 
-            // Metrics
-            document.getElementById("acc").innerText =
-                data.metrics.accuracy.toFixed(3);
+        probText.className =
+            "text-rose-300 mt-1";
 
-            document.getElementById("prec").innerText =
-                data.metrics.precision.toFixed(3);
+        statusIcon.innerHTML = `
+            <i data-lucide="triangle-alert"
+               class="w-8 h-8 text-rose-400"></i>
+        `;
 
-            document.getElementById("rec").innerText =
-                data.metrics.recall.toFixed(3);
+        statusIcon.className =
+            "mx-auto w-14 h-14 rounded-2xl " +
+            "bg-rose-500/10 border border-rose-500/30 " +
+            "flex items-center justify-center mb-4";
 
-            document.getElementById("f1").innerText =
-                data.metrics.f1_score.toFixed(3);
+        resultCard.classList.remove(
+            "safe-glow"
+        );
 
-            lucide.createIcons();
+        resultCard.classList.add(
+            "fraud-glow"
+        );
+
+        showFraudAlert(percentage);
+
+        playFraudBeep();
+
+        resultCard.classList.remove("shake");
+
+        void resultCard.offsetWidth;
+
+        resultCard.classList.add("shake");
+
+    } else {
+
+        result.innerText =
+            "SAFE MESSAGE";
+
+        result.className =
+            "text-2xl font-black text-emerald-400";
+
+        probText.innerText =
+            percentage + "% Fraud Probability";
+
+        probText.className =
+            "text-emerald-300 mt-1";
+
+        statusIcon.innerHTML = `
+            <i data-lucide="shield-check"
+               class="w-8 h-8 text-emerald-400"></i>
+        `;
+
+        statusIcon.className =
+            "mx-auto w-14 h-14 rounded-2xl " +
+            "bg-emerald-500/10 border border-emerald-500/30 " +
+            "flex items-center justify-center mb-4";
+
+        resultCard.classList.remove(
+            "fraud-glow"
+        );
+
+        resultCard.classList.add(
+            "safe-glow"
+        );
+
+        hideFraudAlert();
+
+        if (typeof confetti !== "undefined") {
+
+            confetti({
+                particleCount: 45,
+                spread: 55,
+                origin: {
+                    y: 0.65
+                }
+            });
 
         }
+    }
 
-        function saveToHistory(data, msg) {
+    document.getElementById(
+        "barFill"
+    ).style.width =
+        percentage + "%";
 
-            const entry = {
+    const circumference =
+        251.3;
 
-                id: Date.now(),
+    const dashValue =
+        (prob * circumference).toFixed(2);
 
-                message: msg,
+    document.getElementById(
+        "gaugeFill"
+    ).setAttribute(
+        "stroke-dasharray",
+        `${dashValue} ${circumference}`
+    );
 
-                prediction: data.prediction,
+    const angle =
+        (prob * 180) - 90;
 
-                prob: data.spam_prob
+    document.getElementById(
+        "needle"
+    ).style.transform =
+        `rotate(${angle}deg)`;
 
-            };
+    const words =
+        document.getElementById("words");
 
-            history.unshift(entry);
+    words.innerHTML = "";
 
-            if (history.length > 10)
-                history.pop();
+    const suspicious =
+        Array.isArray(data.suspicious)
+            ? data.suspicious
+            : [];
 
-            localStorage.setItem(
-                "spam_history",
-                JSON.stringify(history)
+    if (suspicious.length > 0) {
+
+        suspicious.forEach(word => {
+
+            const span =
+                document.createElement("span");
+
+            span.className =
+                "px-3 py-1.5 rounded-xl " +
+                "bg-rose-500/10 " +
+                "border border-rose-500/20 " +
+                "text-rose-400 text-xs font-semibold";
+
+            span.innerText =
+                word;
+
+            words.appendChild(span);
+
+        });
+
+    } else {
+
+        words.innerHTML = `
+            <span class="text-xs text-slate-600">
+                No suspicious terms detected.
+            </span>
+        `;
+    }
+
+    if (data.metrics) {
+
+        document.getElementById("acc").innerText =
+            Number(
+                data.metrics.accuracy
+            ).toFixed(3);
+
+        document.getElementById("prec").innerText =
+            Number(
+                data.metrics.precision
+            ).toFixed(3);
+
+        document.getElementById("rec").innerText =
+            Number(
+                data.metrics.recall
+            ).toFixed(3);
+
+        document.getElementById("f1").innerText =
+            Number(
+                data.metrics.f1_score
+            ).toFixed(3);
+    }
+
+    lucide.createIcons();
+}
+
+function showFraudAlert(percentage) {
+
+    const alertBox =
+        document.getElementById("fraudAlert");
+
+    document.getElementById(
+        "alertProbability"
+    ).innerText =
+        percentage + "%";
+
+    alertBox.classList.remove("hidden");
+
+    lucide.createIcons();
+
+    alertBox.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+}
+
+function hideFraudAlert() {
+
+    document.getElementById(
+        "fraudAlert"
+    ).classList.add("hidden");
+}
+
+function dismissAlert() {
+
+    document.getElementById(
+        "fraudAlert"
+    ).classList.add("hidden");
+}
+
+function playFraudBeep() {
+
+    try {
+
+        const AudioContext =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+        if (!AudioContext)
+            return;
+
+        const audioContext =
+            new AudioContext();
+
+        const oscillator =
+            audioContext.createOscillator();
+
+        const gain =
+            audioContext.createGain();
+
+        oscillator.type =
+            "square";
+
+        oscillator.frequency.value =
+            880;
+
+        gain.gain.setValueAtTime(
+            0.0001,
+            audioContext.currentTime
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+            0.25,
+            audioContext.currentTime + 0.03
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+            0.0001,
+            audioContext.currentTime + 0.35
+        );
+
+        oscillator.connect(gain);
+
+        gain.connect(
+            audioContext.destination
+        );
+
+        oscillator.start();
+
+        oscillator.stop(
+            audioContext.currentTime + 0.35
+        );
+
+        setTimeout(() => {
+
+            const oscillator2 =
+                audioContext.createOscillator();
+
+            const gain2 =
+                audioContext.createGain();
+
+            oscillator2.type =
+                "square";
+
+            oscillator2.frequency.value =
+                660;
+
+            gain2.gain.setValueAtTime(
+                0.0001,
+                audioContext.currentTime
             );
 
-            updateHistoryUI();
+            gain2.gain.exponentialRampToValueAtTime(
+                0.25,
+                audioContext.currentTime + 0.03
+            );
 
-        }
+            gain2.gain.exponentialRampToValueAtTime(
+                0.0001,
+                audioContext.currentTime + 0.35
+            );
 
-        function updateHistoryUI() {
+            oscillator2.connect(gain2);
 
-            const list =
-                document.getElementById("historyList");
+            gain2.connect(
+                audioContext.destination
+            );
 
-            if (history.length === 0) {
+            oscillator2.start();
 
-                list.innerHTML =
-                    `<div class="text-center text-slate-500">
-                        No recent messages analyzed.
-                    </div>`;
+            oscillator2.stop(
+                audioContext.currentTime + 0.35
+            );
 
-                return;
+        }, 420);
 
-            }
+    } catch (error) {
 
-            list.innerHTML = history.map(item => `
+        console.log(
+            "Audio alert unavailable:",
+            error
+        );
 
-                <div class="p-4 rounded-2xl bg-slate-800/50">
+    }
+}
 
-                    <div class="flex justify-between mb-2">
+function saveToHistory(data, msg) {
 
-                        <span class="${item.prediction.toLowerCase().includes('spam')
-                    ? 'text-rose-500'
-                    : 'text-emerald-500'
-                } font-bold text-xs">
+    const entry = {
 
-                            ${item.prediction}
+        id: Date.now(),
 
-                        </span>
+        message: msg,
 
-                        <span class="text-xs text-slate-500">
+        prediction: data.prediction,
 
-                            ${(item.prob * 100).toFixed(0)}%
+        prob: Number(
+            data.spam_prob || 0
+        )
+    };
 
+    history.unshift(entry);
+
+    if (history.length > 10) {
+        history.pop();
+    }
+
+    localStorage.setItem(
+        "spam_history",
+        JSON.stringify(history)
+    );
+
+    updateHistoryUI();
+}
+
+function updateHistoryUI() {
+
+    const list =
+        document.getElementById(
+            "historyList"
+        );
+
+    if (history.length === 0) {
+
+        list.innerHTML = `
+            <div class="text-center
+                        text-slate-500
+                        py-6">
+                No recent messages analyzed.
+            </div>
+        `;
+
+        return;
+    }
+
+    list.innerHTML =
+        history.map(item => {
+
+            const probability =
+                Number(item.prob || 0);
+
+            const isFraud =
+                probability >= 0.50;
+
+            return `
+
+                <div class="
+                    p-4
+                    rounded-2xl
+                    bg-slate-800/50
+                    border
+                    ${isFraud
+                        ? "border-rose-500/20"
+                        : "border-emerald-500/10"}
+                ">
+
+                    <div class="
+                        flex
+                        justify-between
+                        items-center
+                        gap-3
+                        mb-2
+                    ">
+
+                        <div class="flex items-center gap-2">
+
+                            <span class="
+                                w-2
+                                h-2
+                                rounded-full
+                                ${isFraud
+                                    ? "bg-rose-500"
+                                    : "bg-emerald-500"}
+                            "></span>
+
+                            <span class="
+                                ${isFraud
+                                    ? "text-rose-400"
+                                    : "text-emerald-400"}
+                                font-bold
+                                text-xs
+                            ">
+                                ${isFraud
+                                    ? "FRAUD"
+                                    : "SAFE"}
+                            </span>
+
+                        </div>
+
+                        <span class="
+                            text-xs
+                            ${isFraud
+                                ? "text-rose-400"
+                                : "text-slate-500"}
+                        ">
+                            ${(probability * 100).toFixed(0)}%
                         </span>
 
                     </div>
 
-                    <p class="text-sm text-slate-300">
-
-                        ${item.message}
-
+                    <p class="
+                        text-sm
+                        text-slate-300
+                        break-words
+                    ">
+                        ${escapeHtml(item.message)}
                     </p>
 
                 </div>
+            `;
 
-            `).join('');
+        }).join("");
+}
 
+function clearHistory() {
+
+    history = [];
+
+    localStorage.removeItem(
+        "spam_history"
+    );
+
+    updateHistoryUI();
+}
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent =
+        text;
+
+    return div.innerHTML;
+}
+
+document.getElementById(
+    "message"
+).addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "Enter") {
+            checkMessage();
         }
 
-        function clearHistory() {
+    }
+);
 
-            history = [];
+lucide.createIcons();
 
-            localStorage.removeItem("spam_history");
-
-            updateHistoryUI();
-
-        }
-
-    </script>
+</script>
 
 </body>
-
 </html>
+
