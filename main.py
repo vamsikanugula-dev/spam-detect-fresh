@@ -1,45 +1,53 @@
 from flask import Flask, request, jsonify
 import joblib
 import re
+import os
 
 app = Flask(__name__)
 
-# Load model, vectorizer, and classification report
+API_KEY = os.getenv("API_KEY")
+
 model = joblib.load("model.pkl")
 vectorizer = joblib.load("vectorizer.pkl")
 report = joblib.load("report.pkl")
 
-# Preprocessing function
+
 def preprocess(text):
     text = text.lower()
     text = re.sub(r'https?://\S+|www\.\S+', ' URL ', text)
     return text
 
 
-# Webpage route
 @app.route("/", methods=["GET"])
 def home():
     with open("index.html", "r", encoding="utf-8") as f:
         html = f.read()
+
     html = html.replace("{{ prediction }}", "")
     return html
 
 
-# Prediction API
 @app.route("/api/predict", methods=["POST"])
 def api_predict():
 
+    auth_header = request.headers.get("Authorization")
+
+    if auth_header != f"Bearer {API_KEY}":
+        return jsonify({"error": "Invalid API key"}), 401
+
     data = request.json
+
     if not data or "message" not in data:
         return jsonify({"error": "No message provided"}), 400
 
     message = data["message"]
+
     processed = preprocess(message)
 
     vector = vectorizer.transform([processed])
+
     pred = model.predict(vector)[0]
 
-    # Styling
     if pred == 1:
         result = "⚠️ SPAM MESSAGE"
         color = "#ffffff"
@@ -51,15 +59,15 @@ def api_predict():
         bgcolor = "#00cc44"
         glow = "#66ff88"
 
-    # Suspicious words
     vector_words = vectorizer.get_feature_names_out()
     tokens = processed.split()
-    suspicious_words = [w for w in tokens if w in vector_words][:5] if pred == 1 else []
 
-    # Spam probability
+    suspicious_words = [
+        w for w in tokens if w in vector_words
+    ][:5] if pred == 1 else []
+
     spam_prob = float(model.predict_proba(vector)[0][1])
 
-    # Metrics from report.pkl
     accuracy = report["accuracy"]
     precision = report["1"]["precision"]
     recall = report["1"]["recall"]
